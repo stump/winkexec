@@ -58,36 +58,3 @@ void qsort(void* base, size_t num, size_t size,
     }
   }
 }
-
-
-/* TODO: Rewrite mem* in assembly. */
-int memcmp(const void* a, const void* b, size_t len)
-{
-  const unsigned char* c = a;
-  const unsigned char* d = b;
-  size_t i;
-
-  for (i = 0; i < len; i++)
-    if (c[i] != d[i])
-      return c[i] - d[i];
-
-  return 0;
-}
-
-
-void* memmove(void* dest, const void* src, size_t len)
-{
-  const unsigned char* a = src;
-  unsigned char* b = dest;
-  size_t i;
-
-  if (b < a) {
-    for (i = 0; i < len; i++)
-      b[i] = a[i];
-  } else {
-    for (i = len; i > 0; i--)
-      b[i-1] = a[i-1];
-  }
-
-  return dest;
-}
