@@ -32,6 +32,11 @@
 
 #include "sha1.h"
 
+/* Manually prototype the mem* functions so we don't have to drag in more
+   headers than necessary that might define nasty things.  */
+void* memcpy(void*, const void*, size_t);
+void* memset(void*, int, size_t);
+
 /* All of these macros assume use on a 32-bit variable.
    Additionally, SWAP assumes we're little-endian.  */
 #define SWAP(a) ((((a) >> 24) & 0x000000ff) | (((a) >>  8) & 0x0000ff00) | \
@@ -39,19 +44,6 @@
 #define ROL(a, b) (((a) << (b)) | ((a) >> (32 - (b))))
 #define ROR(a, b) ROL((a), (32 - (b)))
 
-/* Copy srclen bytes of src to dest, padding with zeros to dstlen. */
-static void _copy_buffer(void* dest, const void* src, size_t srclen, size_t dstlen)
-{
-  size_t i;
-  for (i = 0; i < dstlen; i++) {
-    if (i < srclen)
-      *(unsigned char*)(dest + i) = *(unsigned char*)(src + i);
-    else
-      *(unsigned char*)(dest + i) = 0;
-  }
-}
-
-/* The SHA1 implementation proper. */
 void sha1(void* outbuf, const void* inbuf, size_t length)
 {
   size_t i, j;
@@ -77,12 +69,13 @@ void sha1(void* outbuf, const void* inbuf, size_t length)
     /* Perform any padding necessary. */
     remaining_bytes = length - i;
     if (remaining_bytes >= 64) {
-      _copy_buffer(buf, inbuf + i, 64, 64);
+      memcpy(buf, inbuf + i, 64);
     } else if (remaining_bytes >= 0) {
-      _copy_buffer(buf, inbuf + i, remaining_bytes, 64);
+      memcpy(buf, inbuf + i, remaining_bytes);
+      memset(buf + remaining_bytes, 0, 64 - remaining_bytes);
       buf[remaining_bytes] = 0x80;
     } else {
-      _copy_buffer(buf, NULL, 0, 64);
+      memset(buf, 0, 64);
     }
     if (remaining_bytes < 56)
       *(uint32_t*)(buf + 60) = SWAP(length * 8);
