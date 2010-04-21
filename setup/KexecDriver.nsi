@@ -21,7 +21,7 @@
 Name "Kexec Driver"
 OutFile KexecDriver.exe
 
-SetCompressor zlib
+SetCompressor /SOLID lzma
 
 RequestExecutionLevel admin
 

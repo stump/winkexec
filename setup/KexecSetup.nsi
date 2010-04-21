@@ -25,7 +25,7 @@ OutFile KexecSetup.exe
 InstallDir "$PROGRAMFILES\WinKexec"
 InstallDirRegKey HKLM "Software\WinKexec" InstallRoot
 
-SetCompressor zlib
+SetCompressor /SOLID lzma
 
 RequestExecutionLevel admin
 
