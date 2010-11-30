@@ -18,7 +18,7 @@ include ../common.mk
 
 CFLAGS += -I../include -DDRIVER
 
-KEXEC_SYS_OBJECTS = buffer.o entry.o io.o libpe.o linuxboot.o reboot.o resource.o sha1.o util.o
+KEXEC_SYS_OBJECTS = buffer.o entry.o io.o linuxboot.o reboot.o resource.o sha1.o util.o
 KEXEC_SYS_LIBS = -lntoskrnl -lhal
 
 # boot/reassemble.o *must* be first!
