@@ -71,11 +71,11 @@ static PVOID find_kernel_base(void)
 {
   SYSTEM_MODULE_INFORMATION* module_info = NULL;
   ULONG length = 0;
-  int i;
-  int j;
+  unsigned int i;
+  unsigned int j;
   const PCHAR kernel_filenames[] = {"ntoskrnl.exe", "ntkrnlpa.exe",
                                     "ntkrnlmp.exe", "ntkrpamp.exe"};
-  const int num_kernel_filenames = 4;
+  const unsigned int num_kernel_filenames = 4;
 
   /* Call QSI once to find out how much room to allocate for its output.
      TODO: look up correct error code for having to alloc the buffer */
@@ -95,7 +95,7 @@ static PVOID find_kernel_base(void)
   /* Find the kernel in the module list. */
   for (i = 0; i < module_info->ModulesCount; i++) {
     for (j = 0; j < num_kernel_filenames; j++) {
-      if (strcasecmp(module_info->Modules[i].Name,
+      if (strcasecmp((const char*)module_info->Modules[i].Name,
           kernel_filenames[j]) == 0)
       {
         PVOID kernel_base = module_info->Modules[i].ImageBaseAddress;
@@ -158,7 +158,7 @@ NTSTATUS KexecHookReboot(void)
         NameThunk->u1.AddressOfData != 0; NameThunk++, CallThunk++)
       {
         PIMAGE_IMPORT_BY_NAME NamedImport = KernelBase + NameThunk->u1.AddressOfData;
-        if (strcmp(NamedImport->Name, "HalReturnToFirmware") == 0)
+        if (strcmp((const char*)NamedImport->Name, "HalReturnToFirmware") == 0)
           Target = (halReturnToFirmware_t*)CallThunk;
       }
     }

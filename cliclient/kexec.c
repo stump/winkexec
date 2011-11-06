@@ -28,9 +28,9 @@
 static int DoLoad(int argc, char** argv)
 {
   DWORD klen, ilen, cmdlen;
-  unsigned char* kbuf;
-  unsigned char* ibuf = NULL;
-  unsigned char* cmdline = NULL;
+  char* kbuf;
+  char* ibuf = NULL;
+  char* cmdline = NULL;
   int i;
 
   /* No args: just load the driver and do nothing else. */

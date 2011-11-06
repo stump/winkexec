@@ -36,7 +36,7 @@ static BOOL ctlButtonLoadsDriver;
 static void KxgUpdateDriverState(HWND hDlg)
 {
   DWORD klen, ilen;
-  unsigned char buf[256];
+  char buf[256];
 
   if (KxcIsDriverLoaded()) {
     SetDlgItemText(hDlg, KXG_ID_CONTROL_DRIVER, "Unload driver");
@@ -71,7 +71,7 @@ static void KxgUpdateDriverState(HWND hDlg)
 /* Apply the settings given in the dialog. */
 static void KxgApplySettings(HWND hDlg)
 {
-  unsigned char buf[1024];
+  char buf[1024];
   PVOID kbuf = NULL;
   PVOID ibuf = NULL;
   DWORD klen, ilen;
@@ -156,15 +156,14 @@ end:
 
 /* The processing routine for the main dialog. */
 static BOOL CALLBACK KxgMainDlgProc(HWND hDlg, UINT msg,
-  WPARAM wParam, LPARAM lParam)
+  WPARAM wParam, LPARAM lParam KEXEC_UNUSED)
 {
   HANDLE bigIcon, smallIcon;
-  HWND hCtl;
   UINT newState;
   OPENFILENAME ofn;
-  unsigned char ofnbuf[OFNBUFSIZE];
+  char ofnbuf[OFNBUFSIZE];
   DWORD cmdlen;
-  unsigned char* cmdbuf;
+  char* cmdbuf;
 
   switch (msg) {
     case WM_INITDIALOG:
@@ -205,7 +204,6 @@ static BOOL CALLBACK KxgMainDlgProc(HWND hDlg, UINT msg,
       break;
 
     case WM_COMMAND:
-      hCtl = (HWND)lParam;
       switch (LOWORD(wParam)) {
         case IDOK:
           /* Apply button was pressed. */
