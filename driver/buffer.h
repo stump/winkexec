@@ -19,6 +19,7 @@
 #define KEXEC_DRIVER_BUFFER_H
 
 #include <ddk/ntddk.h>
+#include "compat.h"
 
 typedef struct {
   ULONG Size;

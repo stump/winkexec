@@ -21,6 +21,8 @@
 #include "reboot.h"
 #include "buffer.h"
 
+#include <ddk/ntimage.h>
+
 /* NOTE: This is undocumented! */
 typedef enum _FIRMWARE_REENTRY {
   HalHaltRoutine,

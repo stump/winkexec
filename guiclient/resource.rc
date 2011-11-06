@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <winuser.h>
+#include <winuser.rh>
 #include <winver.h>
 
 #include "resource.h"
