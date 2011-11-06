@@ -16,9 +16,9 @@
 
 CC = $(CROSS)gcc
 ifdef DEBUG
-CFLAGS = -g3 -O2 -W -Wall -mno-cygwin
+CFLAGS = -g3 -O2 -W -Wall
 else
-CFLAGS = -s -O2 -W -Wall -mno-cygwin
+CFLAGS = -s -O2 -W -Wall
 endif
 CYGPATH = cygpath
 DLLTOOL = $(CROSS)dlltool
@@ -26,6 +26,7 @@ LD = $(CROSS)ld
 ifeq ($(CROSS),)
 # Use the Registry to locate the NSIS install path.
 MAKENSIS = "$(shell $(CYGPATH) "$(shell cat /proc/registry/HKEY_LOCAL_MACHINE/SOFTWARE/NSIS/@)")/makensis.exe"
+CFLAGS += -mno-cygwin
 else
 MAKENSIS = makensis
 endif
