@@ -30,6 +30,7 @@ CFLAGS += -mno-cygwin
 else
 MAKENSIS = makensis
 endif
+MAKENSISFLAGS = -V2
 NASM = nasm
 OBJCOPY = $(CROSS)objcopy
 PYTHON = python
@@ -48,5 +49,8 @@ all : __main_target
 .asm.bin :
 	$(NASM) $(NASMFLAGS) -f bin -o $@ $<
 
+.nsi.exe :
+	$(MAKENSIS) $(MAKENSISFLAGS) $<
+
 .SUFFIXES :
-.SUFFIXES : .c .o .rc .asm .bin
+.SUFFIXES : .c .o .rc .asm .bin .exe .nsi
