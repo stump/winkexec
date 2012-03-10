@@ -66,6 +66,15 @@ typedef struct {
 
 NTSTATUS NTAPI ZwQuerySystemInformation(SYSTEM_INFORMATION_CLASS, PVOID, ULONG, PULONG);
 
+/* These are for poking around in loaded module images whose addresses
+ * we find using the stuff above. */
+#define RVA(base, rva, type) ((type)((char*)(base) + (size_t)rva))
+#define DOS_HEADER(base) RVA((base), 0, PIMAGE_DOS_HEADER)
+#define NT_HEADERS(base) RVA((base), DOS_HEADER(base)->e_lfanew, PIMAGE_NT_HEADERS)
+#define DATADIR(base, diridx) ((PIMAGE_DATA_DIRECTORY)&(NT_HEADERS(base)->OptionalHeader.DataDirectory[(diridx)]))
+#define IAT(base) RVA((base), DATADIR((base), IMAGE_DIRECTORY_ENTRY_IAT)->VirtualAddress, PVOID*)
+#define IAT_NUM_ENTRIES(base) (DATADIR((base), IMAGE_DIRECTORY_ENTRY_IAT)->Size / sizeof(PVOID*))
+
 
 static PVOID find_kernel_base(void)
 {
@@ -133,44 +142,39 @@ static VOID KEXEC_NORETURN NTAPI KexecDoReboot(FIRMWARE_REENTRY RebootType)
 NTSTATUS KexecHookReboot(void)
 {
   PVOID KernelBase;
-  PIMAGE_NT_HEADERS NtHeaders;
-  PIMAGE_IMPORT_DESCRIPTOR ImportDescriptor;
+  PVOID* iat;
+  PVOID* iat_end;
   halReturnToFirmware_t* Target = NULL;
   PMDL Mdl;
+  UNICODE_STRING hrtf_name;
 
   /* Find the kernel. */
   KernelBase = find_kernel_base();
   if (KernelBase == NULL
        || !MmIsAddressValid(KernelBase)
-       || ((PIMAGE_DOS_HEADER)KernelBase)->e_magic != 0x5a4d)
+       || DOS_HEADER(KernelBase)->e_magic != 0x5a4d)
   {
     DbgPrint("Unable to find kernel base address.\n");
     return STATUS_UNSUCCESSFUL;
   }
 
-  /* Find the kernel's import table. */
-  NtHeaders = KernelBase + ((PIMAGE_DOS_HEADER)KernelBase)->e_lfanew;
-  ImportDescriptor = KernelBase +
-    NtHeaders->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT].VirtualAddress;
+  /* Find the kernel's import address table. */
+  iat = IAT(KernelBase);
+  iat_end = iat + IAT_NUM_ENTRIES(KernelBase);
 
-  /* Find the kernel's import of HalReturnToFirmware from hal.dll. */
-  while (ImportDescriptor->Name != 0) {
-    if (strcasecmp(KernelBase + ImportDescriptor->Name, "hal.dll") == 0) {
-      PIMAGE_THUNK_DATA NameThunk, CallThunk;
-
-      for (NameThunk = KernelBase + ImportDescriptor->OriginalFirstThunk,
-           CallThunk = KernelBase + ImportDescriptor->FirstThunk;
-        NameThunk->u1.AddressOfData != 0; NameThunk++, CallThunk++)
-      {
-        PIMAGE_IMPORT_BY_NAME NamedImport = KernelBase + NameThunk->u1.AddressOfData;
-        if (strcmp((const char*)NamedImport->Name, "HalReturnToFirmware") == 0)
-          Target = (halReturnToFirmware_t*)CallThunk;
-      }
+  /* Find the kernel's import of HalReturnToFirmware. */
+  RtlInitUnicodeString(&hrtf_name, L"HalReturnToFirmware");
+  real_HalReturnToFirmware = MmGetSystemRoutineAddress(&hrtf_name);
+  while (iat < iat_end) {
+    if (*iat == real_HalReturnToFirmware) {
+      Target = (halReturnToFirmware_t*)iat;
+      break;
     }
+    iat++;
   }
 
   if (Target == NULL) {
-    DbgPrint("Unable to find kernel import descriptor for hal.dll.");
+    DbgPrint("Unable to find HalReturnToFirmware in kernel import address table.\n");
     return STATUS_UNSUCCESSFUL;
   }
 
@@ -186,7 +190,6 @@ NTSTATUS KexecHookReboot(void)
     return STATUS_UNSUCCESSFUL;
   }
   /* Hook it. */
-  real_HalReturnToFirmware = *Target;
   *Target = KexecDoReboot;
   /* And clean up. */
   MmUnmapLockedPages(Target, Mdl);
