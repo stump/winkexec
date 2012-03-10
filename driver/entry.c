@@ -74,7 +74,7 @@ NTSTATUS DDKAPI DriverEntry(PDRIVER_OBJECT DriverObject,
     DriverObject->MajorFunction[IRP_MJ_SHUTDOWN] = KexecShutdown;
     status = IoCreateSymbolicLink(&SymlinkName, &DeviceName);
     if (NT_SUCCESS(status)) {
-      status = IoRegisterShutdownNotification(DeviceObject);
+      status = IoRegisterLastChanceShutdownNotification(DeviceObject);
       if (!NT_SUCCESS(status)) {
         IoDeleteSymbolicLink(&SymlinkName);
         IoDeleteDevice(DeviceObject);
