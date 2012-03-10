@@ -94,9 +94,14 @@ static PVOID find_kernel_base(void)
 
   /* Find the kernel in the module list. */
   for (i = 0; i < module_info->ModulesCount; i++) {
+    SYSTEM_MODULE* module = &module_info->Modules[i];
+    const char* basename = strrchr((const char*)module->Name, '\\');
+    if (basename == NULL)
+      basename = (const char*)module->Name;
+    else if (*basename != '\0')
+      basename++;
     for (j = 0; j < num_kernel_filenames; j++) {
-      if (strcasecmp((const char*)module_info->Modules[i].Name,
-          kernel_filenames[j]) == 0)
+      if (strcasecmp(basename, kernel_filenames[j]) == 0)
       {
         PVOID kernel_base = module_info->Modules[i].ImageBaseAddress;
         ExFreePool(module_info);
