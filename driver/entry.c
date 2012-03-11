@@ -31,6 +31,7 @@ void DDKAPI DriverUnload(PDRIVER_OBJECT DriverObject)
   /* Unregister \\.\kexec with the Windows kernel. */
   RtlInitUnicodeString(&SymlinkName, L"\\??\\kexec");
   IoDeleteSymbolicLink(&SymlinkName);
+  IoUnregisterShutdownNotification(DriverObject->DeviceObject);
   IoDeleteDevice(DriverObject->DeviceObject);
 
   /* Don't waste kernel memory! */
