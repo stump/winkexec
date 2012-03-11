@@ -86,10 +86,11 @@ static PVOID find_kernel_base(void)
                                     "ntkrnlmp.exe", "ntkrpamp.exe"};
   const unsigned int num_kernel_filenames = 4;
 
-  /* Call QSI once to find out how much room to allocate for its output.
-     TODO: look up correct error code for having to alloc the buffer */
-  ZwQuerySystemInformation(SystemModuleInformation,
-    module_info, length, &length);
+  /* Call QSI once to find out how much room to allocate for its output. */
+  if (ZwQuerySystemInformation(SystemModuleInformation,
+    module_info, length, &length) != STATUS_INFO_LENGTH_MISMATCH)
+      return NULL;
+
   module_info = ExAllocatePoolWithTag(NonPagedPool,
     length, TAG('K', 'x', 'e', 'c'));
 
