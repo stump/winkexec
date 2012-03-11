@@ -20,6 +20,7 @@
 
 #include "buffer.h"
 #include "io.h"
+#include "../revtag/revtag.h"
 
 /* Called just before kexec.sys is unloaded. */
 void DDKAPI DriverUnload(PDRIVER_OBJECT DriverObject)
@@ -51,7 +52,7 @@ NTSTATUS DDKAPI DriverEntry(PDRIVER_OBJECT DriverObject,
   UNICODE_STRING SymlinkName;
   PDEVICE_OBJECT DeviceObject;
 
-  DbgPrint("Loading kexec driver\n");
+  DbgPrint("Loading kexec driver " VERSION_STR "\n");
 
   /* Allow kexec.sys to be unloaded. */
   DriverObject->DriverUnload = DriverUnload;
