@@ -25,17 +25,14 @@ KEXEC_SYS_LIBS = -lntoskrnl -lhal
 # The entry point is the first function in the first file given.
 BOOT_REASSEMBLE_EXE_OBJECTS = boot/reassemble.o boot/console.o boot/libc.o boot/pagesort.o boot/verify.o boot/string.o sha1.o util.o
 
-__main_target : kexec.sys kexec.inf
+__main_target : kexec.sys
 
 # Using -shared exports every symbol, but otherwise it would be impossible to debug it efficiently with WinDbg...
 kexec.sys : $(KEXEC_SYS_OBJECTS)
 	$(CC) $(CFLAGS) -shared -nostdlib -Wl,--entry,_DriverEntry@8 -o kexec.sys $(KEXEC_SYS_OBJECTS) $(KEXEC_SYS_LIBS)
 
-kexec.inf : kexec.inf.in
-	$(PYTHON) ../revtag/revtag.py --tag-file .. kexec.inf.in >kexec.inf
-
 clean :
-	-rm -f kexec.sys kexec.inf *.o boot/*.bin boot/*.exe boot/*.o boot/bootcode.h
+	-rm -f kexec.sys *.o boot/*.bin boot/*.exe boot/*.o boot/bootcode.h
 .PHONY : clean
 
 linuxboot.o : boot/bootcode.h
