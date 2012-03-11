@@ -16,10 +16,8 @@
 
 include ../common.mk
 
-__main_target : KexecSetup.exe KexecDriver.exe
-
-KexecSetup.exe : KexecDriver.exe
+__main_target : KexecSetup.exe
 
 clean :
-	-rm -f KexecSetup.exe KexecDriver.exe
+	-rm -f KexecSetup.exe
 .PHONY : clean
