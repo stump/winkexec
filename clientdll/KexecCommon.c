@@ -220,6 +220,7 @@ KEXEC_DLLEXPORT BOOL KxcLoadDriver(void)
   WCHAR DriverFilename[MAX_PATH];
   PWCHAR basename;
   BOOL created_service = FALSE;
+  BOOL retval = FALSE;
 
   KxciResetErrorMessage();
 
@@ -253,16 +254,14 @@ KEXEC_DLLEXPORT BOOL KxcLoadDriver(void)
   if (!KexecService) {
     if (GetLastError() != ERROR_SERVICE_DOES_NOT_EXIST) {
       KxciBuildErrorMessage("Could not open the kexec service");
-      CloseServiceHandle(Scm);
-      return FALSE;
+      goto cleanupscm;
     }
     KexecService = CreateServiceW(Scm, L"kexec", NULL, SERVICE_ALL_ACCESS,
       SERVICE_KERNEL_DRIVER, SERVICE_DEMAND_START, SERVICE_ERROR_NORMAL,
       DriverFilename, NULL, NULL, NULL, NULL, NULL);
     if (!KexecService) {
       KxciBuildErrorMessage("Could not create the kexec service");
-      CloseServiceHandle(Scm);
-      return FALSE;
+      goto cleanupscm;
     }
     created_service = TRUE;
   }
@@ -272,23 +271,23 @@ KEXEC_DLLEXPORT BOOL KxcLoadDriver(void)
     KxciBuildErrorMessage("Could not start the kexec service");
     if (created_service)
       DeleteService(KexecService);
-    CloseServiceHandle(KexecService);
-    CloseServiceHandle(Scm);
-    return FALSE;
+    goto cleanupservice;
   }
 
   if (created_service) {
     if (!DeleteService(KexecService)) {
       KxciBuildErrorMessage("Could not mark the kexec service for deletion");
-      CloseServiceHandle(KexecService);
-      CloseServiceHandle(Scm);
-      return FALSE;
+      goto cleanupservice;
     }
   }
 
+  retval = TRUE;
+
+cleanupservice:
   CloseServiceHandle(KexecService);
+cleanupscm:
   CloseServiceHandle(Scm);
-  return TRUE;
+  return retval;
 }
 
 
@@ -298,6 +297,7 @@ KEXEC_DLLEXPORT BOOL KxcUnloadDriver(void)
   SC_HANDLE Scm;
   SC_HANDLE KexecService;
   SERVICE_STATUS ServiceStatus;
+  BOOL retval = FALSE;
 
   KxciResetErrorMessage();
 
@@ -313,13 +313,12 @@ KEXEC_DLLEXPORT BOOL KxcUnloadDriver(void)
   KexecService = OpenService(Scm, "kexec", SERVICE_ALL_ACCESS);
   if (!KexecService) {
     /* Treat the service not existing as a successful unload. */
-    if (GetLastError() != ERROR_SERVICE_DOES_NOT_EXIST) {
+    if (GetLastError() == ERROR_SERVICE_DOES_NOT_EXIST) {
+      retval = TRUE;
+    } else {
       KxciBuildErrorMessage("Could not open the kexec service");
-      CloseServiceHandle(Scm);
-      return FALSE;
     }
-    CloseServiceHandle(Scm);
-    return TRUE;
+    goto cleanupscm;
   }
 
   /* This does not return until DriverUnload() has completed in kexec.sys.
@@ -327,14 +326,16 @@ KEXEC_DLLEXPORT BOOL KxcUnloadDriver(void)
    * deletion right after using it to load the driver. */
   if (!ControlService(KexecService, SERVICE_CONTROL_STOP, &ServiceStatus)) {
     KxciBuildErrorMessage("Could not stop the kexec service");
-    CloseServiceHandle(KexecService);
-    CloseServiceHandle(Scm);
-    return FALSE;
+    goto cleanupservice;
   }
 
+  retval = TRUE;
+
+cleanupservice:
   CloseServiceHandle(KexecService);
+cleanupscm:
   CloseServiceHandle(Scm);
-  return TRUE;
+  return retval;
 }
 
 

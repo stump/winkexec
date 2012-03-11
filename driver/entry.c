@@ -68,22 +68,30 @@ NTSTATUS DDKAPI DriverEntry(PDRIVER_OBJECT DriverObject,
   /* Register \\.\kexec with the Windows kernel. */
   status = IoCreateDevice(DriverObject, 0, &DeviceName, FILE_DEVICE_UNKNOWN,
     0, FALSE, &DeviceObject);
-  if (NT_SUCCESS(status)) {
-    /* Set our handlers for I/O operations on \\.\kexec. */
-    DriverObject->MajorFunction[IRP_MJ_CREATE] = KexecOpen;
-    DriverObject->MajorFunction[IRP_MJ_CLOSE] = KexecClose;
-    DriverObject->MajorFunction[IRP_MJ_DEVICE_CONTROL] = KexecIoctl;
-    DriverObject->MajorFunction[IRP_MJ_SHUTDOWN] = KexecShutdown;
-    status = IoCreateSymbolicLink(&SymlinkName, &DeviceName);
-    if (NT_SUCCESS(status)) {
-      status = IoRegisterLastChanceShutdownNotification(DeviceObject);
-      if (!NT_SUCCESS(status)) {
-        IoDeleteSymbolicLink(&SymlinkName);
-        IoDeleteDevice(DeviceObject);
-      }
-    } else
-      IoDeleteDevice(DeviceObject);
-  }
+  if (!NT_SUCCESS(status))
+    return status;
+
+  /* Set our handlers for I/O operations on \\.\kexec. */
+  DriverObject->MajorFunction[IRP_MJ_CREATE] = KexecOpen;
+  DriverObject->MajorFunction[IRP_MJ_CLOSE] = KexecClose;
+  DriverObject->MajorFunction[IRP_MJ_DEVICE_CONTROL] = KexecIoctl;
+  DriverObject->MajorFunction[IRP_MJ_SHUTDOWN] = KexecShutdown;
+
+  status = IoCreateSymbolicLink(&SymlinkName, &DeviceName);
+  if (!NT_SUCCESS(status))
+    goto cleanupdev;
+
+  /* Have the kernel poke us when the system is about to shut down. */
+  status = IoRegisterLastChanceShutdownNotification(DeviceObject);
+  if (!NT_SUCCESS(status))
+    goto cleanupsymlink;
+
+  return status;
+
+cleanupsymlink:
+  IoDeleteSymbolicLink(&SymlinkName);
+cleanupdev:
+  IoDeleteDevice(DeviceObject);
 
   return status;
 }
