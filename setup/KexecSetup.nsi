@@ -103,9 +103,7 @@ DoneKexecUninstall:
   File ..\clientdll\KexecCommon.dll
   File ..\cliclient\kexec.exe
   File ..\guiclient\KexecGui.exe
-  File KexecDriver.exe
-  # Install the driver.
-  ExecWait "$\"$INSTDIR\KexecDriver.exe$\" /S"
+  File ..\driver\kexec.sys
   WriteUninstaller "$INSTDIR\KexecUninstall.exe"
   # Make our InstallDirRegKey (and thus, the uninstaller!) useful.
   WriteRegStr HKLM "Software\WinKexec" InstallRoot $INSTDIR
@@ -127,22 +125,8 @@ Section /o "Developer Components"
 SectionEnd
 
 Section "Uninstall"
-  # Unload the driver.
+  # Ensure the driver is unloaded.
   ExecWait "$\"$INSTDIR\kexec.exe$\" /u"
-  # Check if the driver is there.
-  ReadRegStr $0 HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Kexec" "UninstallString"
-  IfErrors NoDriverUninstall
-  # Remove it.
-  ExecWait "$\"$SYSDIR\KexecDriverUninstall.exe$\" /S _?=$SYSDIR"
-  Delete "$SYSDIR\KexecDriverUninstall.exe"
-  Goto DoneDriverUninstall
-  # No driver was installed.
-NoDriverUninstall:
-  DetailPrint "Not uninstalling driver because no kexec driver is installed."
-  ClearErrors
-  # The driver is not longer on the system.
-  # (Either it wasn't there, or we nuked it ourselves.)
-DoneDriverUninstall:
   # Remove us from the PATH.
   ${un.EnvVarUpdate} $0 PATH R HKLM $INSTDIR
   Delete $INSTDIR\devel\kexec.h
@@ -152,7 +136,7 @@ DoneDriverUninstall:
   Delete $INSTDIR\kexec.exe
   Delete $INSTDIR\KexecGui.exe
   Delete $INSTDIR\KexecCommon.dll
-  Delete $INSTDIR\KexecDriver.exe
+  Delete $INSTDIR\kexec.sys
   # Our InstallDirRegKey is no longer useful.
   DeleteRegValue HKLM "Software\WinKexec" InstallRoot
   # Kill the Registry key with our settings.

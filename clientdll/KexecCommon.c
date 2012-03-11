@@ -182,10 +182,15 @@ KEXEC_DLLEXPORT BOOL KxcIsDriverLoaded(void)
 
   KexecService = OpenService(Scm, "kexec", SERVICE_ALL_ACCESS);
   if (!KexecService) {
-    KxciBuildErrorMessage("Could not open the kexec service");
-    KxcReportErrorMsgbox(NULL);
+    /* Treat the service not existing as the driver not being loaded. */
+    if (GetLastError() != ERROR_SERVICE_DOES_NOT_EXIST) {
+      KxciBuildErrorMessage("Could not open the kexec service");
+      KxcReportErrorMsgbox(NULL);
+      CloseServiceHandle(Scm);
+      exit(EXIT_FAILURE);
+    }
     CloseServiceHandle(Scm);
-    exit(EXIT_FAILURE);
+    return FALSE;
   }
 
   if (!QueryServiceStatusEx(KexecService, SC_STATUS_PROCESS_INFO, (LPBYTE)&ServiceStatus,
@@ -204,17 +209,38 @@ KEXEC_DLLEXPORT BOOL KxcIsDriverLoaded(void)
   return retval;
 }
 
+#define DRIVER_FILENAME "kexec.sys"
+#define DRIVER_FILENAME_W L"kexec.sys"
 
 /* Load kexec.sys into the kernel, if it isn't already. */
 KEXEC_DLLEXPORT BOOL KxcLoadDriver(void)
 {
   SC_HANDLE Scm;
   SC_HANDLE KexecService;
+  WCHAR DriverFilename[MAX_PATH];
+  PWCHAR basename;
+  BOOL created_service = FALSE;
 
   KxciResetErrorMessage();
 
   if (KxcIsDriverLoaded())
     return TRUE;
+
+  if (!GetModuleFileNameW(hInst, DriverFilename, MAX_PATH)) {
+    KxciBuildErrorMessage("Could not get path to driver");
+    KxcReportErrorMsgbox(NULL);
+    return FALSE;
+  }
+  basename = wcsrchr(DriverFilename, L'\\');
+  assert(basename != NULL);
+  basename++;
+  if (DriverFilename + MAX_PATH - basename < (int)(wcslen(DRIVER_FILENAME_W) + 1)) {
+    strncpy(kxciLastErrorMsg, "Buffer too small for driver path", 255);
+    kxciLastErrorMsg[255] = '\0';
+    KxcReportErrorMsgbox(NULL);
+    return FALSE;
+  }
+  wcsncpy(basename, DRIVER_FILENAME_W, DriverFilename + MAX_PATH - basename);
 
   Scm = OpenSCManager(NULL, NULL, SC_MANAGER_ALL_ACCESS);
   if (!Scm) {
@@ -222,19 +248,42 @@ KEXEC_DLLEXPORT BOOL KxcLoadDriver(void)
     return FALSE;
   }
 
+  /* Compatibility with old installations: try an existing service first. */
   KexecService = OpenService(Scm, "kexec", SERVICE_ALL_ACCESS);
   if (!KexecService) {
-    KxciBuildErrorMessage("Could not open the kexec service");
-    CloseServiceHandle(Scm);
-    return FALSE;
+    if (GetLastError() != ERROR_SERVICE_DOES_NOT_EXIST) {
+      KxciBuildErrorMessage("Could not open the kexec service");
+      CloseServiceHandle(Scm);
+      return FALSE;
+    }
+    KexecService = CreateServiceW(Scm, L"kexec", NULL, SERVICE_ALL_ACCESS,
+      SERVICE_KERNEL_DRIVER, SERVICE_DEMAND_START, SERVICE_ERROR_NORMAL,
+      DriverFilename, NULL, NULL, NULL, NULL, NULL);
+    if (!KexecService) {
+      KxciBuildErrorMessage("Could not create the kexec service");
+      CloseServiceHandle(Scm);
+      return FALSE;
+    }
+    created_service = TRUE;
   }
 
   /* This does not return until DriverEntry() has completed in kexec.sys. */
   if (!StartService(KexecService, 0, NULL)) {
     KxciBuildErrorMessage("Could not start the kexec service");
+    if (created_service)
+      DeleteService(KexecService);
     CloseServiceHandle(KexecService);
     CloseServiceHandle(Scm);
     return FALSE;
+  }
+
+  if (created_service) {
+    if (!DeleteService(KexecService)) {
+      KxciBuildErrorMessage("Could not mark the kexec service for deletion");
+      CloseServiceHandle(KexecService);
+      CloseServiceHandle(Scm);
+      return FALSE;
+    }
   }
 
   CloseServiceHandle(KexecService);
@@ -263,12 +312,19 @@ KEXEC_DLLEXPORT BOOL KxcUnloadDriver(void)
 
   KexecService = OpenService(Scm, "kexec", SERVICE_ALL_ACCESS);
   if (!KexecService) {
-    KxciBuildErrorMessage("Could not open the kexec service");
+    /* Treat the service not existing as a successful unload. */
+    if (GetLastError() != ERROR_SERVICE_DOES_NOT_EXIST) {
+      KxciBuildErrorMessage("Could not open the kexec service");
+      CloseServiceHandle(Scm);
+      return FALSE;
+    }
     CloseServiceHandle(Scm);
-    return FALSE;
+    return TRUE;
   }
 
-  /* This does not return until DriverUnload() has completed in kexec.sys. */
+  /* This does not return until DriverUnload() has completed in kexec.sys.
+   * This also causes the service to disappear, since we marked it for
+   * deletion right after using it to load the driver. */
   if (!ControlService(KexecService, SERVICE_CONTROL_STOP, &ServiceStatus)) {
     KxciBuildErrorMessage("Could not stop the kexec service");
     CloseServiceHandle(KexecService);
