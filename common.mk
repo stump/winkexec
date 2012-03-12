@@ -15,10 +15,11 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 CC = $(CROSS)gcc
+COMMON_CFLAGS = -W -Wall -Wstrict-prototypes -Wdeclaration-after-statement $(EXTRA_CFLAGS)
 ifdef DEBUG
-CFLAGS = -g3 -O2 -W -Wall
+CFLAGS = -g3 -O2 $(COMMON_CFLAGS)
 else
-CFLAGS = -s -O2 -W -Wall
+CFLAGS = -s -O2 $(COMMON_CFLAGS)
 endif
 CYGPATH = cygpath
 DLLTOOL = $(CROSS)dlltool
@@ -32,6 +33,7 @@ MAKENSIS = makensis
 endif
 MAKENSISFLAGS = -V2
 NASM = nasm
+NASMFLAGS = -w+all
 OBJCOPY = $(CROSS)objcopy
 PYTHON = python
 WINDRES = $(CROSS)windres

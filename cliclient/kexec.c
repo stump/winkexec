@@ -268,7 +268,7 @@ static int DoShow(int argc KEXEC_UNUSED, char** argv KEXEC_UNUSED)
 
 
 /* Show help on cmdline usage of kexec. */
-static void usage()
+static void usage(void)
 {
   fprintf(stderr, "%s",
 "\n\
