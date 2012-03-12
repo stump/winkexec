@@ -131,6 +131,51 @@ _start:
   ;  (kernel, initrd, and kernel command line, each separated by
   ;   an unmapped page)
 
+  ; Let's reset just about every interrupt-related thing we can think
+  ; of here. First we'll make absolutely sure the 8259s are masked...
+  mov al, 0xff
+  out 0xa1, al
+  out 0x21, al
+
+  ; Now we'll find the Local APIC so we can disable it.
+  ; First make sure we have one.
+  ; XXX processors grew LAPICs before they grew this cpuid bit, so we should consult the MP table first
+  mov eax, 0x00000001
+  cpuid
+  test edx, 0x00000200
+  jz .noLAPIC
+
+  ; Now map it at 0x001fe000.
+  call realToProt
+  bits 32
+  mov ecx, 0x0000001b  ; IA32_APIC_BASE
+  rdmsr
+  and eax, 0xfffff000  ; eax is now the LAPIC's physical address
+  or eax, 0x00000023
+  mov dword [0x00007ff0], eax
+  xor eax, eax
+  mov dword [0x00007ff4], eax
+  ; And reset its state as much as we can.
+  mov eax, 0x000000ff
+  mov dword [0x001fe0f0], eax  ; Set the LAPIC to software-disabled.
+  ; Here we're clearing control registers.
+  xor eax, eax
+  mov dword [0x001fe080], eax  ; Task Priority Register
+  mov dword [0x001fe0d0], eax  ; Logical Destination Register
+  mov dword [0x001fe380], eax  ; Timer Initial Count
+  mov dword [0x001fe3e0], eax  ; Timer Divide Configuration
+  ; Now we're clearing vectors, except for the bit that masks them.
+  mov eax, 0x00010000
+  mov dword [0x001fe320], eax  ; Timer vector
+  mov dword [0x001fe330], eax  ; Thermal sensor vector
+  mov dword [0x001fe340], eax  ; Performance counter vector
+  mov dword [0x001fe350], eax  ; LINT0 vector
+  mov dword [0x001fe360], eax  ; LINT1 vector
+  mov dword [0x001fe370], eax  ; Error vector
+  call protToReal
+  bits 16
+.noLAPIC:
+
   ; Drop to text mode with a clean screen.
   mov ax, 0x0003
   xor bx, bx
