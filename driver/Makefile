@@ -18,12 +18,12 @@ include ../common.mk
 
 CFLAGS += -I../include -DDRIVER
 
-KEXEC_SYS_OBJECTS = buffer.o entry.o io.o linuxboot.o reboot.o resource.o sha1.o util.o
+KEXEC_SYS_OBJECTS = buffer.o entry.o io.o linuxboot.o reboot.o resource.o sha1.o
 KEXEC_SYS_LIBS = -lntoskrnl -lhal
 
 # boot/reassemble.o *must* be first!
 # The entry point is the first function in the first file given.
-BOOT_REASSEMBLE_EXE_OBJECTS = boot/reassemble.o boot/console.o boot/libc.o boot/pagesort.o boot/verify.o boot/string.o sha1.o util.o
+BOOT_REASSEMBLE_EXE_OBJECTS = boot/reassemble.o boot/console.o boot/libc.o boot/pagesort.o boot/verify.o boot/string.o sha1.o
 
 __main_target : kexec.sys
 

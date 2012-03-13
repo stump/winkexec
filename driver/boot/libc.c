@@ -21,13 +21,13 @@
 #include "console.h"
 #include "stdlib.h"
 #include "string.h"
-#include "../util.h"
+#include "../inlineasm.h"
 
 void KEXEC_NORETURN abort(void)
 {
   putstr("abort() was called!\n");
-  util_int3();
-  util_hlt();
+  int3();
+  cli_hlt();
 }
 
 

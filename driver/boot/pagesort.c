@@ -20,7 +20,7 @@
 #include "console.h"
 #include "string.h"
 #include "stdlib.h"
-#include "../util.h"
+#include "../inlineasm.h"
 
 static void* kernel_vbase;
 static void* initrd_vbase;
@@ -183,27 +183,27 @@ void pagesort_sort(void)
       memcpy(scratch_page, virt_a, 4096);
       *(uint64_t*)0x00007800 = *pos;
       *pos = 0x0000000000005023ULL;
-      util_invlpg((uint32_t)virt_a);
-      util_invlpg(0x00100000);
+      invlpg((uint32_t)virt_a);
+      invlpg(0x00100000);
 
       /* Copy and remap B to the original location of A while
          mapping 0x00101000 to the original location of B.  */
       memcpy((void*)0x00100000, virt_b, 4096);
       *(uint64_t*)0x00007808 = *lowest;
       *lowest = *(uint64_t*)0x00007800;
-      util_invlpg((uint32_t)virt_b);
-      util_invlpg(0x00101000);
+      invlpg((uint32_t)virt_b);
+      invlpg(0x00101000);
 
       /* Copy the scratch page to the original location of B and
          remap A to the original location of B.  */
       memcpy((void*)0x00101000, scratch_page, 4096);
       *pos = *(uint64_t*)0x00007808;
-      util_invlpg((uint32_t)virt_a);
+      invlpg((uint32_t)virt_a);
 
       /* Unmap the temporary pages. */
       *(uint64_t*)0x00007800 = *(uint64_t*)0x00007808 = 0;
-      util_invlpg(0x00100000);
-      util_invlpg(0x00101000);
+      invlpg(0x00100000);
+      invlpg(0x00101000);
 
     }
 
@@ -273,10 +273,10 @@ void pagesort_collapse(void)
   /* First, move the kernel page directory to the scratch page
      so we don't accidentally hit it.  */
   memcpy(scratch_page, kmap_pagedir, 4096);
-  pdpt_addr = util_get_cr3();
+  pdpt_addr = get_cr3();
   *(uint64_t*)(pdpt_addr + 8) = (uint64_t)((uint32_t)scratch_page | 0x00000001);
   /* Force the PDPT to be reloaded by reloading cr3. */
-  util_reload_cr3();
+  reload_cr3();
 
   kmap_pagedir = scratch_page;
 
@@ -299,18 +299,18 @@ void pagesort_collapse(void)
 
     /* Map 0x00100000 to the destination. */
     *(uint64_t*)0x00007800 = dest | 0x0000000000000023ULL;
-    util_invlpg(0x00100000);
+    invlpg(0x00100000);
 
     /* Copy the page to the destination. */
     memcpy((void*)0x00100000, pagesort_convert_ptr(pos), 4096);
 
     /* Remap the page to the destination. */
     *pos = *(uint64_t*)0x00007800;
-    util_invlpg((uint32_t)pagesort_convert_ptr(pos));
+    invlpg((uint32_t)pagesort_convert_ptr(pos));
 
     /* Unmap 0x00100000. */
     *(uint64_t*)0x00007800 = 0;
-    util_invlpg(0x00100000);
+    invlpg(0x00100000);
 
     dest += 4096;
   }

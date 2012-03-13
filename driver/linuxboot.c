@@ -19,8 +19,7 @@
 
 #include "linuxboot.h"
 #include "buffer.h"
-#include "util.h"  /* assembly routines - we avoid inline assembly
-                      in case we try to port to another compiler.  */
+#include "inlineasm.h"
 
 /* A binary blob that we are going to need -
    namely, the boot code that will finish the job for us.  */
@@ -164,12 +163,12 @@ static void KEXEC_NORETURN DoLinuxBoot(void)
    */
 
   /* Abandon all interrupts, ye who execute here! */
-  util_cli();
+  cli();
 
   /* PAE versus non-PAE means different paging structures.
      Naturally, we will have to take that into account.
    */
-  if (util_pae_enabled()) {
+  if (pae_enabled()) {
     /* We have PAE.
        0x00008000 = directory 0, table 0, page 8, offset 0x000
      */
@@ -179,7 +178,7 @@ static void KEXEC_NORETURN DoLinuxBoot(void)
 
     /* Where is the page directory pointer table? */
     addr.HighPart = 0x00000000;
-    addr.LowPart = util_get_cr3() & 0xffffffe0;
+    addr.LowPart = get_cr3() & 0xffffffe0;
     page_directory_pointer_table = MmMapIoSpace(addr, 4096, MmNonCached);
 
     /* If the page directory isn't present, use
@@ -190,7 +189,7 @@ static void KEXEC_NORETURN DoLinuxBoot(void)
     }
     page_directory_pointer_table[0] |= 0x00000001;
     page_directory_pointer_table[1] &= 0x7fffffff;
-    util_reload_cr3();  /* so a modification to the PDPT takes effect */
+    reload_cr3();  /* so a modification to the PDPT takes effect */
 
     /* Where is the page directory? */
     addr.HighPart = page_directory_pointer_table[1];
@@ -225,7 +224,7 @@ static void KEXEC_NORETURN DoLinuxBoot(void)
 
     /* Where is the page directory? */
     addr.HighPart = 0x00000000;
-    addr.LowPart = util_get_cr3() & 0xfffff000;
+    addr.LowPart = get_cr3() & 0xfffff000;
     page_directory = MmMapIoSpace(addr, 4096, MmNonCached);
 
     /* If the page table isn't present, use
@@ -245,7 +244,7 @@ static void KEXEC_NORETURN DoLinuxBoot(void)
   }
 
   /* Flush the page from the TLB... */
-  util_invlpg(0x00008000);
+  invlpg(0x00008000);
 
   /* ...and away we go! */
   ((void (*)())0x00008000)();
@@ -272,7 +271,7 @@ static VOID KEXEC_NORETURN KexecThreadProc(PVOID Context KEXEC_UNUSED)
   /* Prevent thread switching on this processor. */
   KeRaiseIrql(DISPATCH_LEVEL, &irql);
 
-  currentProcessor = util_current_processor();
+  currentProcessor = current_processor();
   DbgPrint("KexecThreadProc() entered on processor #%d.\n", currentProcessor);
 
   /* If we're the first processor, go ahead. */
@@ -281,8 +280,7 @@ static VOID KEXEC_NORETURN KexecThreadProc(PVOID Context KEXEC_UNUSED)
 
   /* Otherwise, come to a screeching halt. */
   DbgPrint("kexec: killing processor #%d", currentProcessor);
-  util_cli();
-  util_hlt();
+  cli_hlt();
 }
 
 /* Initiate the Linux boot process.
