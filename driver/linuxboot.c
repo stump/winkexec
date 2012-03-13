@@ -244,7 +244,7 @@ static void KEXEC_NORETURN DoLinuxBoot(void)
   }
 
   /* Flush the page from the TLB... */
-  invlpg(0x00008000);
+  invlpg((void*)0x00008000);
 
   /* ...and away we go! */
   ((void (*)())0x00008000)();

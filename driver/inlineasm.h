@@ -34,7 +34,7 @@ static int pae_enabled(void);
 /* Get cr3, which is the physical address of the page directory. */
 static uint32_t get_cr3(void);
 /* Flush from the TLB the page whose address is passed as arg1. */
-static void invlpg(uint32_t page_address);
+static void invlpg(const void* page_address);
 /* Get the current processor number.
  * The MinGW folks did finally unbreak KeGetCurrentProcessorNumber(),
  * but it requires linking in libmingwex.a, which for kernel mode
@@ -74,7 +74,7 @@ static inline uint32_t get_cr3(void)
   return cr3;
 }
 
-static inline void invlpg(uint32_t pg)
+static inline void invlpg(const void* pg)
 {
   __asm__ __volatile__ ("invlpg (%0)" : : "r" (pg) : "memory");
 }

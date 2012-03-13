@@ -183,27 +183,27 @@ void pagesort_sort(void)
       memcpy(scratch_page, virt_a, 4096);
       *(uint64_t*)0x00007800 = *pos;
       *pos = 0x0000000000005023ULL;
-      invlpg((uint32_t)virt_a);
-      invlpg(0x00100000);
+      invlpg(virt_a);
+      invlpg((void*)0x00100000);
 
       /* Copy and remap B to the original location of A while
          mapping 0x00101000 to the original location of B.  */
       memcpy((void*)0x00100000, virt_b, 4096);
       *(uint64_t*)0x00007808 = *lowest;
       *lowest = *(uint64_t*)0x00007800;
-      invlpg((uint32_t)virt_b);
-      invlpg(0x00101000);
+      invlpg(virt_b);
+      invlpg((void*)0x00101000);
 
       /* Copy the scratch page to the original location of B and
          remap A to the original location of B.  */
       memcpy((void*)0x00101000, scratch_page, 4096);
       *pos = *(uint64_t*)0x00007808;
-      invlpg((uint32_t)virt_a);
+      invlpg(virt_a);
 
       /* Unmap the temporary pages. */
       *(uint64_t*)0x00007800 = *(uint64_t*)0x00007808 = 0;
-      invlpg(0x00100000);
-      invlpg(0x00101000);
+      invlpg((void*)0x00100000);
+      invlpg((void*)0x00101000);
 
     }
 
@@ -299,18 +299,18 @@ void pagesort_collapse(void)
 
     /* Map 0x00100000 to the destination. */
     *(uint64_t*)0x00007800 = dest | 0x0000000000000023ULL;
-    invlpg(0x00100000);
+    invlpg((void*)0x00100000);
 
     /* Copy the page to the destination. */
     memcpy((void*)0x00100000, pagesort_convert_ptr(pos), 4096);
 
     /* Remap the page to the destination. */
     *pos = *(uint64_t*)0x00007800;
-    invlpg((uint32_t)pagesort_convert_ptr(pos));
+    invlpg(pagesort_convert_ptr(pos));
 
     /* Unmap 0x00100000. */
     *(uint64_t*)0x00007800 = 0;
-    invlpg(0x00100000);
+    invlpg((void*)0x00100000);
 
     dest += 4096;
   }
