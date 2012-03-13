@@ -18,6 +18,7 @@
 import sys
 import os
 import re
+import subprocess
 
 VERSION = '1.0 development'
 RES_VERSION = '1.0.0.93'  # distinguish from svn, where the last number
@@ -60,13 +61,20 @@ if len(sys.argv) != 4:
 
 def get_revnum():
   try:
-    # HEAD is in the form "ref: refs/heads/master\n"
-    headref = open(os.path.join(sys.argv[2], '.git', 'HEAD')).read()[5:].strip()
-    # The ref is in the form "sha1-hash\n"
-    headhash = open(os.path.join(sys.argv[2], '.git', *headref.split('/'))).read().strip()
-    shortref = re.sub('^refs/(heads/)?', '', headref)
+    # If we're building from git, surely the user must have git.
+    # Ask it what the current commit hash is.
+    gitdir = os.path.join(sys.argv[2], '.git')
+    if os.path.isdir(gitdir):
+      headhash = subprocess.Popen(['git', '--git-dir='+gitdir, 'rev-parse', 'HEAD'], stdout=subprocess.PIPE).communicate()[0].strip()
+
+    # HEAD is in the form "ref: refs/heads/master\n" or "commit-hash\n".
+    headref = open(os.path.join(sys.argv[2], '.git', 'HEAD')).read().strip()
+    if headref == headhash:
+      shortref = '[detached HEAD]'
+    else:
+      shortref = re.sub('^ref: refs/(heads/)?', '', headref)
     gitinfo = ' (git %s %s)' % (shortref, headhash[:7])
-  except IOError:
+  except (OSError, IOError):
     gitinfo = ''
 
   macro_list.append(('RES_VERSION', RES_VERSION.replace('.', ', ')))
