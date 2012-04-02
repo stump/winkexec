@@ -45,7 +45,7 @@ NTSTATUS DDKAPI KexecIoctl(PDEVICE_OBJECT DeviceObject KEXEC_UNUSED, PIRP Irp)
   PIO_STACK_LOCATION IrpStack = IoGetCurrentIrpStackLocation(Irp);
   NTSTATUS status;
   ULONG IoctlCode;
-  DWORD info;
+  ULONG info;
   PKEXEC_BUFFER buf;
 
   status = STATUS_SUCCESS;
@@ -82,13 +82,13 @@ NTSTATUS DDKAPI KexecIoctl(PDEVICE_OBJECT DeviceObject KEXEC_UNUSED, PIRP Irp)
         Irp->AssociatedIrp.SystemBuffer, &info);
       break;
     case KEXEC_GET_SIZE:
-      if (IrpStack->Parameters.DeviceIoControl.OutputBufferLength != sizeof(DWORD)) {
+      if (IrpStack->Parameters.DeviceIoControl.OutputBufferLength != sizeof(uint32_t)) {
         status = STATUS_INVALID_PARAMETER;
         info = 0;
       } else {
-        *(DWORD*)(Irp->AssociatedIrp.SystemBuffer) = KexecGetBufferSize(buf);
+        *(uint32_t*)(Irp->AssociatedIrp.SystemBuffer) = KexecGetBufferSize(buf);
         status = STATUS_SUCCESS;
-        info = sizeof(DWORD);
+        info = sizeof(uint32_t);
       }
       break;
     default:

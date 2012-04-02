@@ -24,7 +24,6 @@
 
 #include <stdint.h>
 
-#define DWORD uint32_t
 #define WORD uint16_t
 #define BYTE UCHAR
 #define DDKAPI NTAPI

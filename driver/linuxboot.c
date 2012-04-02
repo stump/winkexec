@@ -28,16 +28,16 @@
 #include "boot/bootinfo.h"
 
 /* Bail out of the boot process - all we can do now is BSoD... */
-static void KEXEC_NORETURN BootPanic(PCHAR msg, DWORD code1, DWORD code2,
-  DWORD code3, DWORD code4)
+static void KEXEC_NORETURN BootPanic(PCHAR msg, ULONG_PTR code1, ULONG_PTR code2,
+  ULONG_PTR code3, ULONG_PTR code4)
 {
   DbgPrint("kexec: *** PANIC: %s\n", msg);
   KeBugCheckEx(0x00031337, code1, code2, code3, code4);
 }
 
 /* Stash away a pointer to a block of memory for use during boot. */
-static void WriteKernelPointer(DWORD** pd KEXEC_UNUSED,
-  DWORD** pdpos, DWORD** pt, DWORD** ptpos, PVOID virt_addr)
+static void WriteKernelPointer(uint32_t** pd KEXEC_UNUSED,
+  uint32_t** pdpos, uint32_t** pt, uint32_t** ptpos, PVOID virt_addr)
 {
   PHYSICAL_ADDRESS p;
 
@@ -47,7 +47,7 @@ static void WriteKernelPointer(DWORD** pd KEXEC_UNUSED,
       4096, TAG('K', 'x', 'e', 'c'));
     if (!*pt)
       BootPanic("Could not allocate page table!", 0x00000002,
-        (DWORD)virt_addr, 0, 0);
+        (ULONG_PTR)virt_addr, 0, 0);
     p = MmGetPhysicalAddress(*pt);
     *((*pdpos)++) = p.LowPart | 0x00000023;
     *((*pdpos)++) = p.HighPart;
@@ -95,10 +95,10 @@ static void KEXEC_NORETURN DoLinuxBoot(void)
   PHYSICAL_ADDRESS addr;
   PVOID code_dest;
   ULONG i;
-  DWORD* kx_page_directory;
-  DWORD* kx_pd_position;
-  DWORD* kx_page_table;
-  DWORD* kx_pt_position;
+  uint32_t* kx_page_directory;
+  uint32_t* kx_pd_position;
+  uint32_t* kx_page_table;
+  uint32_t* kx_pt_position;
   struct bootinfo* info_block;
 
   /* Allocate the page directory for the kernel map. */
@@ -172,9 +172,9 @@ static void KEXEC_NORETURN DoLinuxBoot(void)
     /* We have PAE.
        0x00008000 = directory 0, table 0, page 8, offset 0x000
      */
-    DWORD* page_directory_pointer_table;
-    DWORD* page_directory;
-    DWORD* page_table;
+    uint32_t* page_directory_pointer_table;
+    uint32_t* page_directory;
+    uint32_t* page_table;
 
     /* Where is the page directory pointer table? */
     addr.HighPart = 0x00000000;
@@ -219,8 +219,8 @@ static void KEXEC_NORETURN DoLinuxBoot(void)
     /* No PAE - it's the original x86 paging mechanism.
        0x00008000 = table 0, page 8, offset 0x000
      */
-    DWORD* page_directory;
-    DWORD* page_table;
+    uint32_t* page_directory;
+    uint32_t* page_table;
 
     /* Where is the page directory? */
     addr.HighPart = 0x00000000;

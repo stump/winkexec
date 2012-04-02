@@ -35,7 +35,7 @@ extern KEXEC_BUFFER KexecKernelCommandLine;
 void KexecInitBuffer(PKEXEC_BUFFER KexecBuffer);
 void KexecDestroyBuffer(PKEXEC_BUFFER KexecBuffer);
 NTSTATUS KexecLoadBuffer(PKEXEC_BUFFER KexecBuffer, ULONG size, PVOID data);
-NTSTATUS KexecGetBuffer(PKEXEC_BUFFER KexecBuffer, ULONG size, PVOID buf, DWORD* osize);
+NTSTATUS KexecGetBuffer(PKEXEC_BUFFER KexecBuffer, ULONG size, PVOID buf, ULONG* osize);
 ULONG KexecGetBufferSize(PKEXEC_BUFFER KexecBuffer);
 
 #endif

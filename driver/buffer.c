@@ -92,7 +92,7 @@ NTSTATUS KexecLoadBuffer(PKEXEC_BUFFER KexecBuffer, ULONG size, PVOID data)
 }
 
 /* Retrieve data from a buffer. */
-NTSTATUS KexecGetBuffer(PKEXEC_BUFFER KexecBuffer, ULONG size, PVOID buf, DWORD* osize)
+NTSTATUS KexecGetBuffer(PKEXEC_BUFFER KexecBuffer, ULONG size, PVOID buf, ULONG* osize)
 {
   LOCK_BUFFER(KexecBuffer);
   if (size < KexecBuffer->Size) {
