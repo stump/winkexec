@@ -23,16 +23,26 @@
 
 #include <stdint.h>
 
+#define CR3_ADDR_MASK 0xfffff000
+#define CR3_ADDR_MASK_PAE 0xffffffe0
+
+#define CR4_PAE 0x00000020
+
 /* Disable interrupts. */
 static void cli(void);
 /* Repeatedly halt the processor in a never-ending loop. */
 static void cli_hlt(void) KEXEC_NORETURN;
 
-/* Figure out whether PAE is enabled.
-   Returns 1 if true or 0 if false.  */
-static int pae_enabled(void);
-/* Get cr3, which is the physical address of the page directory. */
-static uint32_t get_cr3(void);
+/* Routines to get/set the control registers. */
+#define CR_PROTOTYPES(n) \
+  static uint32_t rcr##n(void); \
+  static void lcr##n(uint32_t);
+CR_PROTOTYPES(0)
+CR_PROTOTYPES(2)
+CR_PROTOTYPES(3)
+CR_PROTOTYPES(4)
+#undef CR_PROTOTYPES
+
 /* Flush from the TLB the page whose address is passed as arg1. */
 static void invlpg(const void* page_address);
 /* Get the current processor number.
@@ -42,9 +52,6 @@ static void invlpg(const void* page_address);
 static uint32_t current_processor(void);
 /* A convenient debug breakpoint. */
 static void int3(void);
-/* Reload cr3 with the same value it had before.
-   Useful to force a PDPT reload or forget any cached mappings.  */
-static void reload_cr3(void);
 
 #ifdef __GNUC__
 
@@ -60,18 +67,17 @@ static inline void KEXEC_NORETURN cli_hlt(void)
     __asm__ __volatile__ ("hlt");
 }
 
-static inline int pae_enabled(void)
-{
-  uint32_t cr4;
-  __asm__ __volatile__ ("movl %%cr4, %0" : "=r" (cr4));
-  return !!(cr4 & 0x00000020);
-}
-
-static inline uint32_t get_cr3(void)
-{
-  uint32_t cr3;
-  __asm__ __volatile__ ("movl %%cr3, %0" : "=r" (cr3));
-  return cr3;
+#define CR_DEFINITIONS(n) \
+static inline uint32_t rcr##n(void) \
+{ \
+  uint32_t cr##n; \
+  __asm__ __volatile__ ("movl %%cr" #n ", %0" : "=r" (cr##n)); \
+  return cr##n; \
+} \
+\
+static inline void lcr##n(uint32_t cr##n) \
+{ \
+  __asm__ __volatile__ ("movl %0, %%cr" #n : : "r" (cr##n) : "memory"); \
 }
 
 static inline void invlpg(const void* pg)
@@ -90,16 +96,14 @@ static inline void int3(void)
   __asm__ __volatile__ ("int3");
 }
 
-static inline void reload_cr3(void)
-{
-  uint32_t cr3;
-  __asm__ __volatile__ ("movl %%cr3, %0\n\t"
-                        "movl %0, %%cr3"
-                        : "=r" (cr3) : : "memory");
-}
-
 #else
 #error "Please port the inline assembly functions in inlineasm.h to your compiler's syntax."
 #endif
+
+CR_DEFINITIONS(0)
+CR_DEFINITIONS(2)
+CR_DEFINITIONS(3)
+CR_DEFINITIONS(4)
+#undef CR_DEFINITIONS
 
 #endif

@@ -273,10 +273,10 @@ void pagesort_collapse(void)
   /* First, move the kernel page directory to the scratch page
      so we don't accidentally hit it.  */
   memcpy(scratch_page, kmap_pagedir, 4096);
-  pdpt_addr = get_cr3();
+  pdpt_addr = rcr3() & CR3_ADDR_MASK_PAE;
   *(uint64_t*)(pdpt_addr + 8) = (uint64_t)((uint32_t)scratch_page | 0x00000001);
   /* Force the PDPT to be reloaded by reloading cr3. */
-  reload_cr3();
+  lcr3(rcr3());
 
   kmap_pagedir = scratch_page;
 

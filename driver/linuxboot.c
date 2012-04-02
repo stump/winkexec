@@ -168,7 +168,7 @@ static void KEXEC_NORETURN DoLinuxBoot(void)
   /* PAE versus non-PAE means different paging structures.
      Naturally, we will have to take that into account.
    */
-  if (pae_enabled()) {
+  if (rcr4() & CR4_PAE) {
     /* We have PAE.
        0x00008000 = directory 0, table 0, page 8, offset 0x000
      */
@@ -178,7 +178,7 @@ static void KEXEC_NORETURN DoLinuxBoot(void)
 
     /* Where is the page directory pointer table? */
     addr.HighPart = 0x00000000;
-    addr.LowPart = get_cr3() & 0xffffffe0;
+    addr.LowPart = rcr3() & CR3_ADDR_MASK_PAE;
     page_directory_pointer_table = MmMapIoSpace(addr, 4096, MmNonCached);
 
     /* If the page directory isn't present, use
@@ -189,7 +189,7 @@ static void KEXEC_NORETURN DoLinuxBoot(void)
     }
     page_directory_pointer_table[0] |= 0x00000001;
     page_directory_pointer_table[1] &= 0x7fffffff;
-    reload_cr3();  /* so a modification to the PDPT takes effect */
+    lcr3(rcr3());  /* so a modification to the PDPT takes effect */
 
     /* Where is the page directory? */
     addr.HighPart = page_directory_pointer_table[1];
@@ -224,7 +224,7 @@ static void KEXEC_NORETURN DoLinuxBoot(void)
 
     /* Where is the page directory? */
     addr.HighPart = 0x00000000;
-    addr.LowPart = get_cr3() & 0xfffff000;
+    addr.LowPart = rcr3() & CR3_ADDR_MASK;
     page_directory = MmMapIoSpace(addr, 4096, MmNonCached);
 
     /* If the page table isn't present, use
