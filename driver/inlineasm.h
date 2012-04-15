@@ -52,6 +52,11 @@ static void invlpg(const void* page_address);
 static uint32_t current_processor(void);
 /* A convenient debug breakpoint. */
 static void int3(void);
+/* CPU feature identification */
+static void cpuid(uint32_t idx, uint32_t* eax, uint32_t* ebx, uint32_t* ecx, uint32_t* edx);
+/* Model-specific registers */
+static uint64_t rdmsr(uint32_t addr);
+static void wrmsr(uint32_t addr, uint64_t value);
 
 #ifdef __GNUC__
 
@@ -94,6 +99,23 @@ static inline uint32_t current_processor(void)
 static inline void int3(void)
 {
   __asm__ __volatile__ ("int3");
+}
+
+static inline void cpuid(uint32_t idx, uint32_t* eax, uint32_t* ebx, uint32_t* ecx, uint32_t* edx)
+{
+  __asm__ __volatile__ ("cpuid" : "=a" (*eax), "=b" (*ebx), "=c" (*ecx), "=d" (*edx) : "a" (idx));
+}
+
+static inline uint64_t rdmsr(uint32_t addr)
+{
+  uint32_t valhi, vallo;
+  __asm__ __volatile__ ("rdmsr" : "=a" (vallo), "=d" (valhi) : "c" (addr));
+  return vallo | ((uint64_t)valhi << 32);
+}
+
+static inline void wrmsr(uint32_t addr, uint64_t value)
+{
+  __asm__ __volatile__ ("wrmsr" : : "c" (addr), "a" ((uint32_t)(value & 0xffffffff)), "d" ((uint32_t)(value >> 32)));
 }
 
 #else
