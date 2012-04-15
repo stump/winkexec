@@ -146,8 +146,8 @@ NTSTATUS KexecHookReboot(void)
   PVOID* iat;
   PVOID* iat_end;
   halReturnToFirmware_t* Target = NULL;
-  PMDL Mdl;
   UNICODE_STRING hrtf_name;
+  PHYSICAL_ADDRESS target_phys;
 
   /* Find the kernel. */
   KernelBase = find_kernel_base();
@@ -179,22 +179,11 @@ NTSTATUS KexecHookReboot(void)
     return STATUS_UNSUCCESSFUL;
   }
 
-  /* Make it read-write. */
-  if (!(Mdl = IoAllocateMdl(Target, sizeof(halReturnToFirmware_t), FALSE, FALSE, NULL)))
-    return STATUS_UNSUCCESSFUL;
-  MmBuildMdlForNonPagedPool(Mdl);
-  Mdl->MdlFlags |= MDL_MAPPED_TO_SYSTEM_VA;
-  if (!(Target = MmMapLockedPagesSpecifyCache(Mdl, KernelMode, MmNonCached,
-    NULL, FALSE, HighPagePriority)))
-  {
-    IoFreeMdl(Mdl);
-    return STATUS_UNSUCCESSFUL;
-  }
-  /* Hook it. */
+  /* This is it! */
+  target_phys = MmGetPhysicalAddress(Target);
+  Target = MmMapIoSpace(target_phys, sizeof(halReturnToFirmware_t), MmNonCached);
   *Target = KexecDoReboot;
-  /* And clean up. */
-  MmUnmapLockedPages(Target, Mdl);
-  IoFreeMdl(Mdl);
+  MmUnmapIoSpace(Target, sizeof(halReturnToFirmware_t));
 
   return STATUS_SUCCESS;
 }
