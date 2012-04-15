@@ -64,7 +64,7 @@ typedef struct {
   SYSTEM_MODULE Modules[0];
 } SYSTEM_MODULE_INFORMATION;
 
-NTSTATUS NTAPI ZwQuerySystemInformation(SYSTEM_INFORMATION_CLASS, PVOID, ULONG, PULONG);
+KEXEC_DLLIMPORT NTSTATUS NTAPI ZwQuerySystemInformation(SYSTEM_INFORMATION_CLASS, PVOID, ULONG, PULONG);
 
 /* These are for poking around in loaded module images whose addresses
  * we find using the stuff above. */
