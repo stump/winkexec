@@ -33,7 +33,7 @@ MAKENSIS = makensis
 endif
 MAKENSISFLAGS = -V2
 NASM = nasm
-NASMFLAGS = -w+all
+NASMFLAGS = -w+all -Ox
 OBJCOPY = $(CROSS)objcopy
 PYTHON = python
 WINDRES = $(CROSS)windres
