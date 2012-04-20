@@ -172,45 +172,37 @@ static void KEXEC_NORETURN DoLinuxBoot(void)
     /* We have PAE.
        0x00008000 = directory 0, table 0, page 8, offset 0x000
      */
-    uint32_t* page_directory_pointer_table;
-    uint32_t* page_directory;
-    uint32_t* page_table;
+    uint64_t* page_directory_pointer_table;
+    uint64_t* page_directory;
+    uint64_t* page_table;
 
     /* Where is the page directory pointer table? */
-    addr.HighPart = 0x00000000;
-    addr.LowPart = rcr3() & CR3_ADDR_MASK_PAE;
+    addr.QuadPart = rcr3() & CR3_ADDR_MASK_PAE;
     page_directory_pointer_table = MmMapIoSpace(addr, 4096, MmNonCached);
 
     /* If the page directory isn't present, use
        the second page below the boot code.  */
-    if (!(page_directory_pointer_table[0] & 0x00000001)) {
-      page_directory_pointer_table[0] = 0x00006000;
-      page_directory_pointer_table[1] = 0x00000000;
-    }
-    page_directory_pointer_table[0] |= 0x00000001;
-    page_directory_pointer_table[1] &= 0x7fffffff;
+    if (!(page_directory_pointer_table[0] & 0x0000000000000001ULL))
+      page_directory_pointer_table[0] = 0x0000000000006000ULL;
+    page_directory_pointer_table[0] |= 0x0000000000000001ULL;
+    page_directory_pointer_table[0] &= 0x7fffffffffffffffULL;
     lcr3(rcr3());  /* so a modification to the PDPT takes effect */
 
     /* Where is the page directory? */
-    addr.HighPart = page_directory_pointer_table[1];
-    addr.LowPart = page_directory_pointer_table[0] & 0xfffff000;
+    addr.QuadPart = page_directory_pointer_table[0] & 0xfffffffffffff000ULL;
     page_directory = MmMapIoSpace(addr, 4096, MmNonCached);
 
     /* If the page table isn't present, use
        the next page below the boot code.  */
-    if (!(page_directory[0] & 0x00000001)) {
-      page_directory[0] = 0x00007000;
-      page_directory[1] = 0x00000000;
-    }
-    page_directory[0] |= 0x00000023;
-    page_directory[1] &= 0x7fffffff;
+    if (!(page_directory[0] & 0x0000000000000001ULL))
+      page_directory[0] = 0x0000000000007000ULL;
+    page_directory[0] |= 0x0000000000000023ULL;
+    page_directory[0] &= 0x7fffffffffffffffULL;
 
     /* Map the page table and tweak it to our needs. */
-    addr.HighPart = page_directory[1];
-    addr.LowPart = page_directory[0] & 0xfffff000;
+    addr.QuadPart = page_directory[0] & 0xfffffffffffff000ULL;
     page_table = MmMapIoSpace(addr, 4096, MmNonCached);
-    page_table[0x10] = 0x00008023;
-    page_table[0x11] = 0x00000000;
+    page_table[0x08] = 0x0000000000008023ULL;
     MmUnmapIoSpace(page_table, 4096);
 
     MmUnmapIoSpace(page_directory, 4096);
