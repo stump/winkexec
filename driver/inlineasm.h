@@ -28,6 +28,13 @@
 
 #define CR4_PAE 0x00000020
 
+#define PTE_PRESENT 0x00000001
+#define PTE_RW 0x00000002
+#define PTE_NX 0x8000000000000000ULL
+
+#define PTE_ADDR_MASK 0xfffff000
+#define PTE_ADDR_MASK_PAE 0x7ffffffffffff000
+
 /* Disable interrupts. */
 static void cli(void);
 /* Repeatedly halt the processor in a never-ending loop. */

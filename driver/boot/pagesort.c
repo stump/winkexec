@@ -182,7 +182,7 @@ void pagesort_sort(void)
          mapping 0x00100000 to the original location of A.  */
       memcpy(scratch_page, virt_a, 4096);
       *(uint64_t*)0x00007800 = *pos;
-      *pos = 0x0000000000005023ULL;
+      *pos = 0x0000000000005000ULL | PTE_PRESENT | PTE_RW;
       invlpg(virt_a);
       invlpg((void*)0x00100000);
 
@@ -274,7 +274,7 @@ void pagesort_collapse(void)
      so we don't accidentally hit it.  */
   memcpy(scratch_page, kmap_pagedir, 4096);
   pdpt_addr = rcr3() & CR3_ADDR_MASK_PAE;
-  *(uint64_t*)(pdpt_addr + 8) = (uint64_t)((uint32_t)scratch_page | 0x00000001);
+  *(uint64_t*)(pdpt_addr + 8) = (uint64_t)((uint32_t)scratch_page | PTE_PRESENT);
   /* Force the PDPT to be reloaded by reloading cr3. */
   lcr3(rcr3());
 
@@ -298,7 +298,7 @@ void pagesort_collapse(void)
 #endif
 
     /* Map 0x00100000 to the destination. */
-    *(uint64_t*)0x00007800 = dest | 0x0000000000000023ULL;
+    *(uint64_t*)0x00007800 = dest | PTE_PRESENT | PTE_RW;
     invlpg((void*)0x00100000);
 
     /* Copy the page to the destination. */
