@@ -36,31 +36,24 @@ static void KEXEC_NORETURN BootPanic(PCHAR msg, ULONG_PTR code1, ULONG_PTR code2
 }
 
 /* Stash away a pointer to a block of memory for use during boot. */
-static void WriteKernelPointer(uint32_t** pd KEXEC_UNUSED,
-  uint32_t** pdpos, uint32_t** pt, uint32_t** ptpos, PVOID virt_addr)
+static void WriteKernelPointer(uint64_t** pd KEXEC_UNUSED,
+  uint64_t** pdpos, uint64_t** pt, uint64_t** ptpos, PVOID virt_addr)
 {
-  PHYSICAL_ADDRESS p;
-
   /* Allocate a new page table, if necessary. */
-  if ((!*ptpos) || (*ptpos - *pt >= 1024)) {
+  if ((!*ptpos) || (*ptpos - *pt >= 512)) {
     *pt = *ptpos = ExAllocatePoolWithTag(NonPagedPool,
       4096, TAG('K', 'x', 'e', 'c'));
     if (!*pt)
       BootPanic("Could not allocate page table!", 0x00000002,
         (ULONG_PTR)virt_addr, 0, 0);
-    p = MmGetPhysicalAddress(*pt);
-    *((*pdpos)++) = p.LowPart | 0x00000023;
-    *((*pdpos)++) = p.HighPart;
+    *((*pdpos)++) = MmGetPhysicalAddress(*pt).QuadPart | 0x0000000000000023ULL;
   }
 
   /* Write a 64-bit pointer into the page table.
      (Note: said table will be used with PAE enabled.)  */
   if (virt_addr) {
-    p = MmGetPhysicalAddress(virt_addr);
-    *((*ptpos)++) = p.LowPart | 0x00000023;  /* necessary page flags */
-    *((*ptpos)++) = p.HighPart;
+    *((*ptpos)++) = MmGetPhysicalAddress(virt_addr).QuadPart | 0x0000000000000023ULL;
   } else {
-    *((*ptpos)++) = 0;
     *((*ptpos)++) = 0;
   }
 }
@@ -95,10 +88,10 @@ static void KEXEC_NORETURN DoLinuxBoot(void)
   PHYSICAL_ADDRESS addr;
   PVOID code_dest;
   ULONG i;
-  uint32_t* kx_page_directory;
-  uint32_t* kx_pd_position;
-  uint32_t* kx_page_table;
-  uint32_t* kx_pt_position;
+  uint64_t* kx_page_directory;
+  uint64_t* kx_pd_position;
+  uint64_t* kx_page_table;
+  uint64_t* kx_pt_position;
   struct bootinfo* info_block;
 
   /* Allocate the page directory for the kernel map. */
@@ -215,8 +208,7 @@ static void KEXEC_NORETURN DoLinuxBoot(void)
     uint32_t* page_table;
 
     /* Where is the page directory? */
-    addr.HighPart = 0x00000000;
-    addr.LowPart = rcr3() & CR3_ADDR_MASK;
+    addr.QuadPart = rcr3() & CR3_ADDR_MASK;
     page_directory = MmMapIoSpace(addr, 4096, MmNonCached);
 
     /* If the page table isn't present, use
@@ -226,8 +218,7 @@ static void KEXEC_NORETURN DoLinuxBoot(void)
     page_directory[0] |= 0x00000023;
 
     /* Map the page table and tweak it to our needs. */
-    addr.HighPart = 0x00000000;
-    addr.LowPart = page_directory[0] & 0xfffff000;
+    addr.QuadPart = page_directory[0] & 0xfffff000;
     page_table = MmMapIoSpace(addr, 4096, MmNonCached);
     page_table[0x08] = 0x00008023;
     MmUnmapIoSpace(page_table, 4096);
