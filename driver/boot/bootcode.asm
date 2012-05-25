@@ -481,6 +481,10 @@ int%1_isr:
   ;               exception number
   ;               [top]
 isr_common:
+  ; We came in on a special code segment to help make the boot code
+  ; relocatable. Go back to using the usual segment.
+  jmp 0x0008:.in_right_seg
+.in_right_seg:
   ; Stash all other registers.
   pushad
   push ds
@@ -767,31 +771,34 @@ gdtstart:
   dataseg dq 0x00cf93000000ffff
   real_codeseg dq 0x00009b000000ffff
   real_dataseg dq 0x000093000000ffff
+  codeseg_wrt_this_file dq 0x00cf9b008000ffff  ; FIXME relocation
 gdtend:
 
 ; The interrupt descriptor table used for protected mode exception handling.
-; Since we know that the handler addresses fit entirely in the lower
+; Since we know that the handler offsets fit entirely in the lower
 ; 16 bits, we can cheat when forming the entries and not split the words.
-%define IDT_BASE_DESCRIPTOR 0x00008e0000080000
+; Use a special code segment so we can refer to these just by offset from
+; the base of this file, to assist in relocatability of the boot code.
+%define IDT_BASE_DESCRIPTOR 0x00008e0000280000
   align 8
 idtstart:
-  dq IDT_BASE_DESCRIPTOR + int0x00_isr
-  dq IDT_BASE_DESCRIPTOR + int0x01_isr
-  dq IDT_BASE_DESCRIPTOR + int0x02_isr
-  dq IDT_BASE_DESCRIPTOR + int0x03_isr
-  dq IDT_BASE_DESCRIPTOR + int0x04_isr
-  dq IDT_BASE_DESCRIPTOR + int0x05_isr
-  dq IDT_BASE_DESCRIPTOR + int0x06_isr
+  dq IDT_BASE_DESCRIPTOR + int0x00_isr - $$
+  dq IDT_BASE_DESCRIPTOR + int0x01_isr - $$
+  dq IDT_BASE_DESCRIPTOR + int0x02_isr - $$
+  dq IDT_BASE_DESCRIPTOR + int0x03_isr - $$
+  dq IDT_BASE_DESCRIPTOR + int0x04_isr - $$
+  dq IDT_BASE_DESCRIPTOR + int0x05_isr - $$
+  dq IDT_BASE_DESCRIPTOR + int0x06_isr - $$
   dq 0
-  dq IDT_BASE_DESCRIPTOR + int0x08_isr
+  dq IDT_BASE_DESCRIPTOR + int0x08_isr - $$
   dq 0
-  dq IDT_BASE_DESCRIPTOR + int0x0a_isr
-  dq IDT_BASE_DESCRIPTOR + int0x0b_isr
-  dq IDT_BASE_DESCRIPTOR + int0x0c_isr
-  dq IDT_BASE_DESCRIPTOR + int0x0d_isr
-  dq IDT_BASE_DESCRIPTOR + int0x0e_isr
+  dq IDT_BASE_DESCRIPTOR + int0x0a_isr - $$
+  dq IDT_BASE_DESCRIPTOR + int0x0b_isr - $$
+  dq IDT_BASE_DESCRIPTOR + int0x0c_isr - $$
+  dq IDT_BASE_DESCRIPTOR + int0x0d_isr - $$
+  dq IDT_BASE_DESCRIPTOR + int0x0e_isr - $$
   dq 0
-  dq IDT_BASE_DESCRIPTOR + int0x10_isr
+  dq IDT_BASE_DESCRIPTOR + int0x10_isr - $$
 idtend:
 
 ; The pointer to the global descriptor table, used when loading it.
